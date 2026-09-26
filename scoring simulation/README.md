@@ -67,7 +67,7 @@ jupyter nbconvert --to notebook --execute --inplace scoring_simulation.ipynb
    variance decomposition on independent inputs, where the classic estimators are
    valid.
 5. **Ranking robustness (weight uncertainty).** Over 20,000 Dirichlet weight
-   perturbations the rankings are stable (modal rank held in 91-100% of draws; 0
+   perturbations the rankings are stable (modal rank held in 100% of draws; 0
    of 15 pairs "too close to call"), because veto-bound scores do not depend on
    the weights. This is a rank-reversal robustness analysis, **not** a Sobol'
    index.
@@ -89,3 +89,12 @@ $$\mathrm{Risk}_i = \max\left( 1 - \prod_{d} \left(1 - R_{id}\right)^{W_d},\ \ma
 where $\mathcal{C}$ is the set of critical-control dimensions (Access Control, Action Control, Monitoring and Audit); the second term is the **veto floor**. Risk bands are terciles: Low $< 1/3$, Medium $\in [1/3,\, 2/3)$, High $\ge 2/3$.
 
 **Sobol' estimators:** first-order $S_i$ (Saltelli et al., 2010) and total-effect $S_{Ti}$ (Jansen, 1999), on a Sobol' quasi-random Saltelli design; 95% CIs by bootstrap.
+
+## Correction to the Section 6.2 rank-retention figure
+
+The thesis quotes 91-100% rank retention. That was a tie-breaking artefact:
+UC-B and UC-C are pinned to the same score by the veto floor and cannot be
+ordered, so the figure measured floating-point rounding rather than the
+scoring rule. The corrected, machine-independent value is 100%, with the
+UC-B/UC-C pair reported as tied. See the root README for the full
+explanation and `outputs/section_6_2_numbers.csv` for both values.

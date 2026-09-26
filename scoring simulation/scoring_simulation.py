@@ -40,7 +40,7 @@ Run:   python scoring_simulation.py
 Needs: numpy, scipy, matplotlib   (see requirements.txt)
 """
 import numpy as np
-from scipy.stats import qmc, norm
+from scipy.stats import qmc, norm, rankdata
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -199,7 +199,26 @@ cases = {**UC, **extra}; names=list(cases); Rmat=np.array([cases[n_] for n_ in n
 M = 20_000
 Wdraw = rng.dirichlet(W0*40.0, size=M)      # plausible perturbations around equal weights
 comps = np.array([composite(Rmat, Wm) for Wm in Wdraw])   # (M, n_cases)
-ranks = (-comps).argsort(axis=1).argsort(axis=1) + 1       # rank 1 = highest risk
+
+# Ties have to be handled explicitly here, and the reason is structural rather
+# than numerical. Two use cases whose critical-control dimensions are all High
+# are both pinned to the same value by the veto floor whenever that floor binds,
+# whatever the weights are: UC-B and UC-C score exactly 0.800 in ~91% of these
+# draws, and in the rest they differ by one unit in the last place (~2e-16) with
+# no consistent sign. Ranking those with argsort asks the sort to order two
+# numbers that are equal, which it does by position, and the result then depends
+# on how the machine rounded the geometric term -- it differs between CPUs.
+#
+# An earlier version of this script did exactly that, and reported "91% modal
+# rank retention" for UC-B and UC-C. That 91% was not a property of the scoring
+# rule: it was the share of draws in which the two identical scores happened to
+# round to the same double on the machine that ran it (another CPU gives 94%).
+# Rounding to TIE_TOL and ranking ties as tied removes the artefact, makes the
+# number identical on every machine, and reports the honest result: the ranking
+# is stable under weight uncertainty, and UC-B and UC-C are tied, not ordered.
+TIE_TOL = 1e-12                                            # << any real score gap
+snapped = np.round(comps / TIE_TOL) * TIE_TOL
+ranks = rankdata(-snapped, method="min", axis=1).astype(int)   # rank 1 = highest risk
 with open(f"{OUT}/rank_stability.csv","w",newline="") as f:
     w=csv.writer(f); w.writerow(["use_case","baseline_composite","modal_rank",
                                  "P_modal_percent","P_modal_MCSE_pp","rank_min","rank_max"])
@@ -207,14 +226,21 @@ with open(f"{OUT}/rank_stability.csv","w",newline="") as f:
         modal=np.bincount(ranks[:,i]).argmax(); p=float(np.mean(ranks[:,i]==modal))
         w.writerow([nm,f"{float(composite(Rmat[i])):.3f}",modal,f"{100*p:.0f}",
                     f"{100*mcse_prop(p,M):.2f}",int(ranks[:,i].min()),int(ranks[:,i].max())])
-pairs=tctc=0
+
+# Pairwise stability. A pair that is tied in the majority of draws is reported as
+# tied rather than counted as agreeing: comparing it with a strict ">" would score
+# the one pair that cannot be ordered as the most stable pair of all.
+pairs=tctc=tied_pairs=0; tied_names=[]
 for i in range(len(names)):
     for j in range(i+1,len(names)):
         pairs+=1
+        if np.mean(snapped[:,i]==snapped[:,j])>0.5:
+            tied_pairs+=1; tied_names.append(f"{names[i]}/{names[j]}"); continue
         base=float(composite(Rmat[i]))>float(composite(Rmat[j]))
-        if np.mean((comps[:,i]>comps[:,j])!=base)>0.05: tctc+=1
+        if np.mean((snapped[:,i]>snapped[:,j])!=base)>0.05: tctc+=1
 print(f"D) ranking robustness over {M:,} Dirichlet weight draws: "
-      f"{tctc} of {pairs} pairs 'too close to call'")
+      f"{tctc} of {pairs} pairs 'too close to call'; "
+      f"{tied_pairs} tied by construction ({', '.join(tied_names) or 'none'})")
 
 # ============================================================================
 # Experiment E: sensitivity to the ordinal Low/Medium/High number encoding
@@ -282,7 +308,8 @@ REPORT = [
  f"[6.2 F3] critical-control dims carry {crit_share*100:.0f}% of the score's movement "
  f"(Sobol total-effect share); other four ~{ST[noncrit].mean():.2f} each",
  f"[6.2 F4] rank retention {min(retention):.0f}%-{max(retention):.0f}% over {M:,} weight draws; "
- f"pairs too close to call: {tctc} of {pairs}",
+ f"pairs too close to call: {tctc} of {pairs}; tied by construction: {tied_pairs} of {pairs} "
+ f"({', '.join(tied_names) or 'none'})  [thesis text quotes 91-100%; see README]",
  f"[6.2 F4] encoding 0.2/0.4/0.9 -> UC-A {band(enc_azn['UC-A'])}, UC-B {band(enc_azn['UC-B'])}, "
  f"UC-C {band(enc_azn['UC-C'])} (order unchanged)",
  f"[6.2 F5] UC-A under plain average = {ucA_avg:.2f}; under full rule = {uc_comp['UC-A']:.2f} "
@@ -302,8 +329,12 @@ with open(f"{OUT}/section_6_2_numbers.csv","w",newline="") as f:
                 f"{meanB['additive']:.2f}/{meanB['geometric']:.2f}/{meanB['geometric+veto']:.2f}/{meanB['plain max']:.2f}"])
     w.writerow(["6.2 F2","analytic bound holds","True",str(bound_ok)])
     w.writerow(["6.2 F3","critical-control Sobol total-effect share","93%",f"{crit_share*100:.0f}%"])
+    # The text's 91% was a tie-break artefact (see Experiment D); the corrected,
+    # machine-independent computation is 100%. Both are shown, as everywhere else.
     w.writerow(["6.2 F4","rank retention min-max","91-100%",f"{min(retention):.0f}-{max(retention):.0f}%"])
     w.writerow(["6.2 F4","pairs too close to call","0 of 15",f"{tctc} of {pairs}"])
+    w.writerow(["6.2 F4","pairs tied by construction","not reported",
+                f"{tied_pairs} of {pairs} ({', '.join(tied_names) or 'none'})"])
     w.writerow(["6.2 F5","UC-A plain average / full rule","0.29 / 0.50",f"{ucA_avg:.2f} / {uc_comp['UC-A']:.2f}"])
 
 # ============================================================================

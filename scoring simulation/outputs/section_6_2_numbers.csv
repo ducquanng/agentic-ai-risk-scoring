@@ -6,6 +6,7 @@ thesis_reference,quantity,value_in_text,computed_value
 6.2 F2,means additive/geo/geo+veto/max,0.50/0.61/0.77/0.88,0.50/0.61/0.77/0.88
 6.2 F2,analytic bound holds,True,True
 6.2 F3,critical-control Sobol total-effect share,93%,93%
-6.2 F4,rank retention min-max,91-100%,91-100%
+6.2 F4,rank retention min-max,91-100%,100-100%
 6.2 F4,pairs too close to call,0 of 15,0 of 15
+6.2 F4,pairs tied by construction,not reported,1 of 15 (UC-B/UC-C)
 6.2 F5,UC-A plain average / full rule,0.29 / 0.50,0.29 / 0.50

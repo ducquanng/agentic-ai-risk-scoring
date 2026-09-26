@@ -1,4 +1,6 @@
 # Agentic AI — a model-validation-ready risk taxonomy, metrics, and scoring framework
+
+![Reproduce](https://github.com/ducquanng/agentic-ai-risk-scoring/actions/workflows/reproduce.yml/badge.svg)
  
 Supplementary material and reproducibility code for the MSc thesis
  
@@ -45,7 +47,7 @@ This runs in well under a minute on a laptop and needs only `numpy`, `scipy`, an
 - `outputs/section_6_2_numbers.csv` — every figure quoted in Section 6.2, next to the value the code actually computed (so each is traceable).
 - `outputs/sim_scoring.png` — the three-panel figure from the thesis.
 - seven more CSVs — the Sobol' indices, robustness checks, and ablations behind the chapter.
-The run is fully deterministic (`SEED = 20260713`); re-running reproduces the same numbers byte-for-byte. A ready-to-run `scoring_simulation.ipynb` notebook is provided as well (regenerate it from the script with `python build_notebook.py`).
+The run is fully deterministic (`SEED = 20260713`); re-running reproduces the same numbers byte-for-byte. A GitHub Actions job reruns the study on a clean machine on every push and monthly, and fails if any committed CSV differs by a byte — the badge above is that check. The numbers were last confirmed under NumPy 2.4 / SciPy 1.17, four library generations after they were produced; the figure is excluded from the comparison because Matplotlib's PNG output depends on its own version and the fonts installed. A ready-to-run `scoring_simulation.ipynb` notebook is provided as well (regenerate it from the script with `python build_notebook.py`).
  
 ---
  

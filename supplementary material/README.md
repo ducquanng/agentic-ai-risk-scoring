@@ -9,7 +9,7 @@ RPN prioritisation, the theory-versus-practice comparison, and the reusable
 monitoring-metric set. It is meant to be read next to the thesis, so that any
 number, metric, or risk type in the text can be traced back to its source here.
 
-A separate package, `scoring_simulation_reproducibility` (the **Python code**),
+A separate folder, `scoring simulation/` (the **Python code**),
 reproduces the Chapter 6 scoring simulation and its figure. The two sit side by
 side in the same repository.
 

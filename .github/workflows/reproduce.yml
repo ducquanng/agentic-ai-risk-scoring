@@ -1,0 +1,32 @@
+name: Reproduce
+
+# The claim this repository makes is that every number quoted in Chapter 6
+# regenerates from a fixed seed. This workflow tests that claim rather than the
+# code style: it reruns the simulation on a clean machine and fails if any CSV
+# differs from the committed one by a single byte.
+#
+# Dependencies are installed unpinned on purpose, so the day a new NumPy or
+# SciPy release changes a result, this job is what says so.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Monthly, to catch a library change even when nothing is pushed.
+    - cron: "0 6 1 * *"
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r "scoring simulation/requirements.txt"
+      - name: Rerun the Monte-Carlo study
+        run: python scoring_simulation.py
+        working-directory: "scoring simulation"
+      - name: Committed results must be byte-identical
+        # The figure is excluded: Matplotlib's PNG output depends on its own
+        # version and on the fonts present, so it is not a reproducibility signal.
+        run: git diff --exit-code -- "scoring simulation/outputs/*.csv"
